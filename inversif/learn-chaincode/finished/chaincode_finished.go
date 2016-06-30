@@ -20,8 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-//	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"github.com/hyperledger/fabric/tree/master/core/chaincode/shim"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
 // SimpleChaincode example simple Chaincode implementation
