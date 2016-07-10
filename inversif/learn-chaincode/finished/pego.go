@@ -23,6 +23,9 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
+var projectIndexStr = "_projectindex" //name for the key that will store list of project index/project name
+var employeeIndexStr = "_employeeindex" //name for the key that will store list of employee index/employeeID
+
 //same as employee
 type Member struct{
 	MemberID string `json:"memberid"`
@@ -40,9 +43,6 @@ type Project struct{
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
-
-var projectIndexStr = "_projectindex" //name for the key that will store list of project index/project name
-var employeeIndexStr = "_employeeindex" //name for the key that will store list of employee index/employeeID
 
 func main() {
 	err := shim.Start(new(SimpleChaincode))
@@ -66,14 +66,23 @@ func (t *SimpleChaincode) Init(stub *shim.ChaincodeStub, function string, args [
 }
 
 // Invoke isur entry point to invoke a chaincode function
-func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
+func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, 
+		function string, args []string) ([]byte, error) {
 	fmt.Println("invoke is running " + function)
 
 	// Handle different functions
-	if function == "init" {
-		return t.Init(stub, "init", args)
-	} else if function == "write" {
-		return t.write(stub, args)
+	if function == "write" {											    //writes a value to the chaincode state
+		return t.Write(stub, args)
+	} else if function == "add_employee"{									//add new employee
+        return t.add_employee(stub, args)
+    } else if function == "update_employee" {								//update attributes of existing employee
+		return t.update_employee(stub, args)
+	} else if function == "create_project"{									//create new project
+		return t.create_project(stub, args)
+	} else if function == "add_project_member"{								//add new member to the project
+		return t.add_project_member(stub, args)
+	} else if function == "delete_project_member"{							//delete member from a project
+		return t.delete_project_member(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -91,25 +100,6 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
 	fmt.Println("query did not find func: " + function)
 
 	return nil, errors.New("Received unknown function query")
-}
-
-// write - invoke function to write key/value pair
-func (t *SimpleChaincode) write(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	var key, value string
-	var err error
-	fmt.Println("running write()")
-
-	if len(args) != 2 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
-	}
-
-	key = args[0] //rename for funsies
-	value = args[1]
-	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
 }
 
 // read - query function to read key/value pair
@@ -150,7 +140,6 @@ func InquireEmployee (stub *shim.ChaincodeStub, args []string) (Member, error) {
 	//check if employee is exists
 	employeeAsBytes, err := stub.GetState(args[0])	//get employee detail from chaincode state
 	if err != nil {
-        fmt.Println("Failed to get employee")
 		return Member{}, errors.New("Failed to get employee")
 	}
 
@@ -169,43 +158,51 @@ func AssignToEmployee(id string, name string, title string, level string,
     nemployee.Level, _ = strconv.Atoi(level)
 }
 
-func (t *SimpleChaincode) update_employee(stub *shim.ChaincodeStub, args []string) {
-	if len(args) != 5 {
-        fmt.Println("Incorrect number of arguments. Expecting 5")
-		return
-	}
+// TODO: Might have to change key's type
+// Function to invoke Marshal & PutState consecutively.
+func PutBack(stub *shim.ChaincodeStub, employee Member, key int) ([]byte, error) {
+	employeeAsBytes, _ := json.Marshal(employee)
 
+	strkey := strconv.Itoa(key)
+	err := stub.PutState(strkey, employeeAsBytes) //write the new employee to the chaincode state
+	if err != nil {
+		return nil, errors.New("Error on PutState")
+	}
+	return employeeAsBytes, nil
+}
+
+func (t *SimpleChaincode) update_employee(stub *shim.ChaincodeStub, args []string) ([]byte, error){
 	employeeObj, err := InquireEmployee(stub, args)
 	if err != nil{
-		err = errors.New("Fail at InquireEmployee")
 		fmt.Println(err)
-		return
+		return nil, err
 	}
 
 	person_id, _ := strconv.Atoi(args[0])
-	AssignToEmployee(args[0], args[1], args[2], args[3], args[4],
-		 &employeeObj)
+	AssignToEmployee(args[0], args[1], args[2], args[3], args[4], &employeeObj)
+
 	_, errvar := PutBack(stub, employeeObj, person_id)
     if errvar != nil {
-    	errvar = errors.New("Fail at PutBack")
 		fmt.Println(errvar)
-    	return 
+    	return nil, errvar
     }
+
+    return nil, nil
 }
 
-func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) error {
+func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	//   0       1       2           3          4
 	// "id", "name", "job title", "level", "job group"
 	new_employee, err := InquireEmployee(stub, args)
 	if err != nil { 
 		fmt.Println(err)
-		return errors.New("")	// TODO: Think of a good alternative to the current return value.
+		return nil, errors.New("")	// TODO: Think of a good alternative to the current return value.
 	}
 
 	// if emp_exist := FindEmployee(new_employee.MemberID, args[0]); emp_exist {
 	if new_employee.MemberID == args[0] {
 		fmt.Println("This employee arleady exists: ", args[0])
-		return errors.New("This employee arleady exists")
+		return nil, errors.New("This employee arleady exists")
 	}
 
 	conv_id, _ := strconv.Atoi(args[0])
@@ -214,33 +211,17 @@ func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) 
     employeeIndexAsBytes, errvar := PutBack(stub, new_employee, conv_id)
     if errvar != nil {
     	fmt.Println(errvar)
-    	return errors.New("")
+    	return nil, errors.New("")
     }
-
-    var employeeIndex []string
-	json.Unmarshal(employeeIndexAsBytes, &employeeIndex)							//un stringify it aka JSON.parse()
 	
-	anyerror := GetIndex(employeeIndexAsBytes, stub, args[0])
+	anyerror := GetIndex(employeeIndexAsBytes, stub, args[0], false)
 	if anyerror != nil {
 		anyerror = errors.New("Failed to retrieve employee's index")
-		return anyerror
+		return nil, anyerror
 	}
 
 	fmt.Println("- end add employee")
-	return nil
-}
-
-// TODO: Might have to change key's type
-// Function to invoke Marshal & PutState consecutively.
-func PutBack(stub *shim.ChaincodeStub, employee Member, key int) ([]byte, error) {
-	employeeAsBytes, _ := json.Marshal(employee) // TODO: Find out where Marshal returns second value is
-
-	strkey := strconv.Itoa(key)
-	err := stub.PutState(strkey, employeeAsBytes) //write the new employee to the chaincode state
-	if err != nil {
-		return nil, errors.New("Error on PutState")
-	}
-	return employeeAsBytes, nil
+	return nil, nil
 }
 
 // Get Project's information, and returns a Project struct and necessary error
@@ -260,6 +241,25 @@ func InquireProject (stub *shim.ChaincodeStub, argument string) (Project, error)
 	return project, nil
 }
 
+func GetIndex(somethingAsBytes []byte, stub *shim.ChaincodeStub, 
+		name string, whichone bool) error{
+	var indexList []string
+	json.Unmarshal(somethingAsBytes, &indexList)
+	
+	//append
+	indexList = append(indexList, name)
+	fmt.Println("! index: ", indexList)
+	jsonAsBytes, _ := json.Marshal(indexList)
+	// projectIndexStr is a global variable
+	if whichone == true{
+		err := stub.PutState(projectIndexStr, jsonAsBytes)	// TODO: Might want to reconsider return value(s)
+	}
+	else{
+		err := stub.PutState(employeeIndexStr, jsonAsBytes)
+	}
+	return err
+}
+
 // Initiate a project
 // TODO: Check if key & name is arg[0].
 func (t *SimpleChaincode) create_project(stub *shim.ChaincodeStub, args []string) ([]byte, error){
@@ -267,7 +267,7 @@ func (t *SimpleChaincode) create_project(stub *shim.ChaincodeStub, args []string
 	//input sanitation
 	fmt.Println("- start creating project")
 	if (len(args) != 1) && (len(args[0]) <= 0) { 
-		fmt.Println("Invalid argument! Consider these cases \n1. Incorrect number of argument 1st  \n2. argument must be a non-empty string \n")
+		fmt.Println("Invalid argument! Consider these cases \n1. Incorrect number of argument 1\n2. argument must be a non-empty string\n")
 		return nil, errors.New("Incorrect invocation of function! See log!")
 	}
 
@@ -282,7 +282,7 @@ func (t *SimpleChaincode) create_project(stub *shim.ChaincodeStub, args []string
 
 	//check if project already exists
 	if res.Name == args[0]{
-		fmt.Println("This project arleady exists: " + args[0])
+		fmt.Println("This project arleady exists: ", args[0])
 		return nil, errors.New("This project already exists")
 	}
 
@@ -294,10 +294,13 @@ func (t *SimpleChaincode) create_project(stub *shim.ChaincodeStub, args []string
 		return nil, err
 	}
 
-	var projectIndex []string
-	json.Unmarshal(projectAsBytes, &projectIndex)							//un stringify it aka JSON.parse()
+	//get the project index
+	projectAsBytes, err = stub.GetState(projectIndexStr)
+	if err != nil {
+		return nil, errors.New("Failed to get project index")
+	}
 	
-	anyerror := GetIndex(projectAsBytes, stub, args[0])
+	anyerror := GetIndex(projectAsBytes, stub, args[0], true)
 	if anyerror != nil{
 		fmt.Println(anyerror)
 		return nil, anyerror
@@ -305,21 +308,6 @@ func (t *SimpleChaincode) create_project(stub *shim.ChaincodeStub, args []string
 
 	fmt.Println("- end create project")
 	return nil, nil
-}
-
-func GetIndex(somethingAsBytes []byte, stub *shim.ChaincodeStub, 
-		name string) error{
-	var indexList []string
-	json.Unmarshal(somethingAsBytes, &indexList)
-	
-	//append
-	indexList = append(indexList, name)
-	fmt.Println("! project index: ", indexList)
-	jsonAsBytes, _ := json.Marshal(indexList)
-	// projectIndexStr is a global variable
-	err := stub.PutState(projectIndexStr, jsonAsBytes)	// TODO: Might want to reconsider return value(s)
-	return err
-
 }
 
 func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub, 
@@ -331,7 +319,7 @@ func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub,
 
 		if len(new_project.Members) == 0 {
 			new_project.Members = append(new_project.Members, args[i])	//append memberID/employeeID to project members array 
-			fmt.Println("! Success add new member: " + args[i])
+			fmt.Println("! Success add new member: ", args[i])
 		}
 
 		for j := range new_project.Members{
@@ -341,9 +329,9 @@ func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub,
 			}
 		}
 
-		if isExists == 1 {
+		if isExists == 0 {
 			new_project.Members = append(new_project.Members, args[i])	//append memberID/employeeID to project members array 
-			fmt.Println("! Success add new member: " + args[i])
+			fmt.Println("! Success add new member: ", args[i])
 		}
 	}
 
@@ -360,6 +348,12 @@ func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub,
 
 func (t *SimpleChaincode) delete_project_member(stub *shim.ChaincodeStub, 
 		args []string) ([]byte, error){
+	//   0                  1
+	// "project name", "member id"
+	if len(args) != 2 {
+		fmt.Println("Incorrect number of arguments. Expecting 2")
+		return nil, errors.New("Incorrect number of arguments. Expecting 2")
+	}
 	new_project, err := InquireProject(stub, args[0])
 
 	//remove member from project
