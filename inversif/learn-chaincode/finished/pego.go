@@ -23,6 +23,9 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
+var projectIndexStr = "_projectindex" //name for the key that will store list of project index/project name
+var employeeIndexStr = "_employeeindex" //name for the key that will store list of employee index/employeeID
+
 //same as employee
 type Member struct{
 	MemberID string `json:"memberid"`
@@ -40,9 +43,6 @@ type Project struct{
 // SimpleChaincode example simple Chaincode implementation
 type SimpleChaincode struct {
 }
-
-var projectIndexStr = "_projectindex" //name for the key that will store list of project index/project name
-var employeeIndexStr = "_employeeindex" //name for the key that will store list of employee index/employeeID
 
 func main() {
 	err := shim.Start(new(SimpleChaincode))
@@ -70,10 +70,18 @@ func (t *SimpleChaincode) Invoke(stub *shim.ChaincodeStub, function string, args
 	fmt.Println("invoke is running " + function)
 
 	// Handle different functions
-	if function == "init" {
-		return t.Init(stub, "init", args)
-	} else if function == "write" {
-		return t.write(stub, args)
+	if function == "write" {											    //writes a value to the chaincode state
+		return t.Write(stub, args)
+	} else if function == "add_employee"{									//add new employee
+        return t.add_employee(stub, args)
+    } else if function == "update_employee" {								//update attributes of existing employee
+		return t.update_employee(stub, args)
+	} else if function == "create_project"{									//create new project
+		return t.create_project(stub, args)
+	} else if function == "add_project_member"{								//add new member to the project
+		return t.add_project_member(stub, args)
+	} else if function == "delete_project_member"{							//delete member from a project
+		return t.delete_project_member(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -91,25 +99,6 @@ func (t *SimpleChaincode) Query(stub *shim.ChaincodeStub, function string, args 
 	fmt.Println("query did not find func: " + function)
 
 	return nil, errors.New("Received unknown function query")
-}
-
-// write - invoke function to write key/value pair
-func (t *SimpleChaincode) write(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-	var key, value string
-	var err error
-	fmt.Println("running write()")
-
-	if len(args) != 2 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
-	}
-
-	key = args[0] //rename for funsies
-	value = args[1]
-	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
 }
 
 // read - query function to read key/value pair
@@ -331,7 +320,7 @@ func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub,
 
 		if len(new_project.Members) == 0 {
 			new_project.Members = append(new_project.Members, args[i])	//append memberID/employeeID to project members array 
-			fmt.Println("! Success add new member: " + args[i])
+			fmt.Println("! Success add new member: ", args[i])
 		}
 
 		for j := range new_project.Members{
@@ -341,9 +330,9 @@ func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub,
 			}
 		}
 
-		if isExists == 1 {
+		if isExists == 0 {
 			new_project.Members = append(new_project.Members, args[i])	//append memberID/employeeID to project members array 
-			fmt.Println("! Success add new member: " + args[i])
+			fmt.Println("! Success add new member: ", args[i])
 		}
 	}
 
