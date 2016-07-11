@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strconv"
 	"encoding/json"
-	"strings"
+	// "strings"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -207,7 +207,7 @@ func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) 
 	new_employee, err := InquireEmployee(stub, args)
 	if err != nil { 
 		fmt.Println(err)
-		return nil, errors.New("")	// TODO: Think of a good alternative to the current return value.
+		return nil, err	// TODO: Think of a good alternative to the current return value.
 	}
 
 	// if emp_exist := FindEmployee(new_employee.MemberID, args[0]); emp_exist {
@@ -255,6 +255,7 @@ func InquireProject (stub *shim.ChaincodeStub, argument string) (Project, error)
 func GetIndex(somethingAsBytes []byte, stub *shim.ChaincodeStub, 
 		name string, whichone bool) error{
 	var indexList []string
+	var err error
 	json.Unmarshal(somethingAsBytes, &indexList)
 	
 	//append
@@ -263,11 +264,11 @@ func GetIndex(somethingAsBytes []byte, stub *shim.ChaincodeStub,
 	jsonAsBytes, _ := json.Marshal(indexList)
 	// projectIndexStr is a global variable
 	if whichone == true{
-		err := stub.PutState(projectIndexStr, jsonAsBytes)	// TODO: Might want to reconsider return value(s)
+		err = stub.PutState(projectIndexStr, jsonAsBytes)	// TODO: Might want to reconsider return value(s)
+	} else {
+		err = stub.PutState(employeeIndexStr, jsonAsBytes)
 	}
-	else{
-		err := stub.PutState(employeeIndexStr, jsonAsBytes)
-	}
+
 	return err
 }
 
