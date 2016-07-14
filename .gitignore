@@ -1,2 +1,3 @@
 hyperledger/
 test/
+*.sh

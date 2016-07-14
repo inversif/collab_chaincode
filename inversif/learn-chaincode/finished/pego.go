@@ -113,7 +113,7 @@ func (t *SimpleChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byte,
 
 	key = args[0]
 	valAsbytes, err := stub.GetState(key)
-	if err != nil {
+	if valAsbytes != nil {
 		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
 		return nil, errors.New(jsonResp)
 	}
@@ -163,7 +163,8 @@ func PutBack(stub *shim.ChaincodeStub, employee Member, key int) ([]byte, error)
 	employeeAsBytes, _ := json.Marshal(employee)
 
 	strkey := strconv.Itoa(key)
-	fmt.Println("Employee key CC: ", key, " data ", employeeAsBytes)
+
+	fmt.Println("Employee key CC: ", strkey, " data ", employee)
 
 	err := stub.PutState(strkey, employeeAsBytes) //write the new employee to the chaincode state
 	if err != nil {
