@@ -207,7 +207,7 @@ func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) 
 	conv_id, _ := strconv.Atoi(args[0])
 	AssignToEmployee(args[0], args[1], args[2], args[3], args[4], &new_employee)
 
-    employeeIndexAsBytes, errvar := PutBack(stub, new_employee, conv_id)
+    _, errvar := PutBack(stub, new_employee, conv_id)
     if errvar != nil {
     	fmt.Println(errvar)
     	return nil, errors.New("")
