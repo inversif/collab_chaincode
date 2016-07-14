@@ -158,7 +158,6 @@ func AssignToEmployee(id string, name string, title string, level string,
     nemployee.Level, _ = strconv.Atoi(level)
 }
 
-// TODO: Might have to change key's type
 // Function to invoke Marshal & PutState consecutively.
 func PutBack(stub *shim.ChaincodeStub, employee Member, key int) ([]byte, error) {
 	employeeAsBytes, _ := json.Marshal(employee)
@@ -252,8 +251,8 @@ func GetIndex(somethingAsBytes []byte, stub *shim.ChaincodeStub,
 	fmt.Println("! index: ", indexList)
 	jsonAsBytes, _ := json.Marshal(indexList)
 	// projectIndexStr is a global variable
-	if whichone == true{
-		err = stub.PutState(projectIndexStr, jsonAsBytes)	// TODO: Might want to reconsider return value(s)
+	if whichone == true {
+		err = stub.PutState(projectIndexStr, jsonAsBytes)
 	} else {
 		err = stub.PutState(employeeIndexStr, jsonAsBytes)
 	}
