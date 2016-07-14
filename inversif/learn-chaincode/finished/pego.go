@@ -162,9 +162,9 @@ func AssignToEmployee(id string, name string, title string, level string,
 func PutBack(stub *shim.ChaincodeStub, employee Member, key int) ([]byte, error) {
 	employeeAsBytes, _ := json.Marshal(employee)
 
+	strkey := strconv.Itoa(key)
 	fmt.Println("Employee key CC: ", key, " data ", employeeAsBytes)
 
-	strkey := strconv.Itoa(key)
 	err := stub.PutState(strkey, employeeAsBytes) //write the new employee to the chaincode state
 	if err != nil {
 		return nil, errors.New("Error on PutState")
