@@ -212,6 +212,12 @@ func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) 
     	fmt.Println(errvar)
     	return nil, errors.New("")
     }
+
+    //get the employee index
+	employeeIndexAsBytes, err := stub.GetState(employeeIndexStr)
+	if err != nil {
+		return nil, errors.New("Failed to get employee index")
+	}
 	
 	anyerror := GetIndex(employeeIndexAsBytes, stub, args[0], false)
 	if anyerror != nil {
