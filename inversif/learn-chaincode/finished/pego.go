@@ -194,7 +194,7 @@ func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) 
 	new_employee, err := InquireEmployee(stub, args)
 	if err != nil { 
 		fmt.Println(err)
-		return nil, err	// TODO: Think of a good alternative to the current return value.
+		return nil, err
 	}
 
 	// if emp_exist := FindEmployee(new_employee.MemberID, args[0]); emp_exist {
@@ -265,7 +265,6 @@ func GetIndex(somethingAsBytes []byte, stub *shim.ChaincodeStub,
 }
 
 // Initiate a project
-// TODO: Check if key & name is arg[0].
 func (t *SimpleChaincode) create_project(stub *shim.ChaincodeStub, args []string) ([]byte, error){
 
 	//input sanitation
@@ -318,7 +317,7 @@ func (t *SimpleChaincode) add_project_member(stub *shim.ChaincodeStub,
 		args []string) ([]byte, error){
 	new_project, err := InquireProject(stub, args[0])
 
-	for i:=1; i < len(args); i++ {	// TODO: Might be off by 1, prolly start at 0
+	for i:=1; i < len(args); i++ {
 		isExists := 0 //0 means member still not in this project
 
 		if len(new_project.Members) == 0 {
