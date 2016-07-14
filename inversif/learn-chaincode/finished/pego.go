@@ -158,14 +158,12 @@ func AssignToEmployee(id string, name string, title string, level string,
 }
 
 // Function to invoke Marshal & PutState consecutively.
-func PutBack(stub *shim.ChaincodeStub, employee Member, key int) ([]byte, error) {
+func PutBack(stub *shim.ChaincodeStub, employee Member, key string) ([]byte, error) {
 	employeeAsBytes, _ := json.Marshal(employee)
 
-	strkey := strconv.Itoa(key)
+	fmt.Println("Employee key CC: ", key, " data ", employee)
 
-	fmt.Println("Employee key CC: ", strkey, " data ", employee)
-
-	err := stub.PutState(strkey, employeeAsBytes) //write the new employee to the chaincode state
+	err := stub.PutState(key, employeeAsBytes) //write the new employee to the chaincode state
 	if err != nil {
 		return nil, errors.New("Error on PutState")
 	}
@@ -179,10 +177,9 @@ func (t *SimpleChaincode) update_employee(stub *shim.ChaincodeStub, args []strin
 		return nil, err
 	}
 
-	person_id, _ := strconv.Atoi(args[0])
 	AssignToEmployee(args[0], args[1], args[2], args[3], args[4], &employeeObj)
 
-	_, errvar := PutBack(stub, employeeObj, person_id)
+	_, errvar := PutBack(stub, employeeObj, args[0])
     if errvar != nil {
 		fmt.Println(errvar)
     	return nil, errvar
@@ -206,10 +203,9 @@ func (t *SimpleChaincode) add_employee(stub *shim.ChaincodeStub, args []string) 
 		return nil, errors.New("This employee arleady exists")
 	}
 
-	conv_id, _ := strconv.Atoi(args[0])
 	AssignToEmployee(args[0], args[1], args[2], args[3], args[4], &new_employee)
 
-    _, errvar := PutBack(stub, new_employee, conv_id)
+    _, errvar := PutBack(stub, new_employee, args[0])
     if errvar != nil {
     	fmt.Println(errvar)
     	return nil, errors.New("")
